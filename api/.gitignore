@@ -27,8 +27,16 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .cache
 *.tsbuildinfo
 
+# Generated Prisma agent skills
+.agents/
+.claude/
+.cursor/
+.devin/
+
 # IntelliJ based IDEs
 .idea
 
 # Finder (MacOS) folder config
 .DS_Store
+node_modules/
+dist/
