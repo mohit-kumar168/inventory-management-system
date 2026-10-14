@@ -7,6 +7,7 @@ const envSchema = z.object({
     .default("development"),
 
   PORT: z.coerce.number().default(8000),
+  BCRYPT_SALT_ROUNDS: z.coerce.number().default(10),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   DIRECT_URL: z.string().min(1, "DIRECT_URL is required"),
 
