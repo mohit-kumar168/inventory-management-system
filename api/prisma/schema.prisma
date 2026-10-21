@@ -215,6 +215,7 @@ model User {
   status                 UserStatus            @default(ACTIVE)
   createdAt              DateTime              @default(now()) @db.Timestamptz(6)
   updatedAt              DateTime              @updatedAt @db.Timestamptz(6)
+  refreshTokens          RefreshToken[]
   createdStockMovements  StockMovement[]       @relation("StockMovementCreatedBy")
   createdAdjustments     InventoryAdjustment[] @relation("AdjustmentCreatedBy")
   approvedAdjustments    InventoryAdjustment[] @relation("AdjustmentApprovedBy")
@@ -227,6 +228,20 @@ model User {
 
   @@index([status, role])
   @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime  @db.Timestamptz(6)
+  revokedAt DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
 
 model Customer {
