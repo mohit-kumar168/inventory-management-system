@@ -1,6 +1,6 @@
 import type { Request, Response, RequestHandler, NextFunction } from "express";
 
-const asyncHandler = (
+const AsyncHandler = (
   fn: RequestHandler
 ): RequestHandler => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -8,4 +8,4 @@ const asyncHandler = (
   };
 };
 
-export default asyncHandler;
+export default AsyncHandler;

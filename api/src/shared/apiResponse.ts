@@ -1,4 +1,4 @@
-export default class apiResponse<T> {
+export default class ApiResponse<T> {
   success = true
 
   constructor(

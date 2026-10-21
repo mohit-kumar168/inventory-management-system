@@ -5,7 +5,7 @@ export interface TokenPayload extends JwtPayload {
   id: string;
 }
 
-export const generateAccessTokken = (userId: string): string => {
+export const generateAccessToken = (userId: string): string => {
   return jwt.sign(
     {
       id: userId,

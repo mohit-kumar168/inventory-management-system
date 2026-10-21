@@ -1,4 +1,4 @@
-export default class apiError extends Error {
+export default class ApiError extends Error {
   statusCode: number;
   isOperational: boolean;
 
