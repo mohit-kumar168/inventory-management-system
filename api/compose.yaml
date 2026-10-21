@@ -1,0 +1,18 @@
+
+services:
+  api:
+    build: .
+    container_name: inventory-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: sh -c "bun install --frozen-lockfile && bunx prisma generate && bun --watch src/server.ts"
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - api_node_modules:/app/node_modules
+
+volumes:
+  api_node_modules:
+
