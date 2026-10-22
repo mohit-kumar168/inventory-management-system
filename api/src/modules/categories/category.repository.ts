@@ -66,5 +66,33 @@ export const CategoryRepository = {
     });
   },
 
+  update(
+    id: string,
+    data: {
+      name?: string;
+      slug?: string;
+      description?: string | null;
+      parentId?: string | null;
+    },
+  ) {
+    return prisma.productCategory.update({
+      where: {
+        id,
+      },
+      data,
+      select: categorySelect,
+    });
+  },
+
+  delete(
+    id: string,
+  ) {
+    return prisma.productCategory.delete({
+      where: {
+        id,
+      },
+      select: categorySelect,
+    });
+  },
 
 }

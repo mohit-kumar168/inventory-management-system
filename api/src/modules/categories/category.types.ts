@@ -17,5 +17,5 @@ export const updateCategorySchema = z.object({
   message: "At least one field must be provided",
 });
 
-export type createCategoryInput = z.output<typeof createCategorySchema>;
-export type updateCategoryInput = z.output<typeof updateCategorySchema>;
+export type CreateCategoryInput = z.output<typeof createCategorySchema>;
+export type UpdateCategoryInput = z.output<typeof updateCategorySchema>;
