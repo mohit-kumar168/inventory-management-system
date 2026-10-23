@@ -2,6 +2,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import authRoutes from "./modules/auth/auth.routes";
 import categoryRoutes from "./modules/categories/category.routes";
+import productRoutes from "./modules/products/product.routes";
 
 const app = express();
 
@@ -17,5 +18,6 @@ app.get("/api/v1/health", (_req, res) => {
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/categories", categoryRoutes);
+app.use("/api/v1/products", productRoutes);
 
 export default app;
