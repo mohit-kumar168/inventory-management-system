@@ -23,7 +23,7 @@ export const updateProfileSchema = z.object({
   (data) =>
     data.firstName !== undefined ||
     data.lastName !== undefined,
-  { message: "At least one field must be provided" },
+  "At least one field must be provided",
 )
 
 export type RegisterInput = z.output<typeof registerSchema>;
