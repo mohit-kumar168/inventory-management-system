@@ -5,6 +5,7 @@ import categoryRoutes from "./modules/categories/category.routes";
 import productRoutes from "./modules/products/product.routes";
 import warehouseRoutes from "./modules/warehouses/warehouse.routes";
 import supplierRoutes from "./modules/supplier/supplier.routes";
+import customerRoutes from "./modules/customer/customer.routes";
 
 const app = express();
 
@@ -23,5 +24,6 @@ app.use("/api/v1/categories", categoryRoutes);
 app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/warehouses", warehouseRoutes);
 app.use("/api/v1/suppliers", supplierRoutes);
+app.use("/api/v1/customers", customerRoutes);
 
 export default app;
