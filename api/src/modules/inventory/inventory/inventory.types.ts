@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { typecast } from "zod/v3";
 
 export const listInventoryBalancesSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),

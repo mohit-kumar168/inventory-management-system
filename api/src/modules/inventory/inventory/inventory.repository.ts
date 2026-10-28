@@ -1,5 +1,5 @@
 import { PurchaseOrderStatus } from "@prisma/client";
-import prisma from "../../prisma/db";
+import prisma from "../../../prisma/db";
 import type { ListInventoryBalancesInput, ReconciliationInput } from "./inventory.types";
 
 

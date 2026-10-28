@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
-import AsyncHandler from "../../shared/asyncHandler";
-import ApiResponse from "../../shared/apiResponse";
-import ApiError from "../../shared/apiError";
+import AsyncHandler from "../../../shared/asyncHandler";
+import ApiResponse from "../../../shared/apiResponse";
+import ApiError from "../../../shared/apiError";
 import { InventoryService } from "./inventory.service";
 import {
   listInventoryBalancesSchema,

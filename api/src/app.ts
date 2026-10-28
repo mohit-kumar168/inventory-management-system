@@ -5,7 +5,7 @@ import categoryRoutes from "./modules/categories/category.routes";
 import productRoutes from "./modules/products/product.routes";
 import warehouseRoutes from "./modules/warehouses/warehouse.routes";
 import supplierRoutes from "./modules/supplier/supplier.routes";
-import inventoryRoutes from "./modules/inventory/inventory.routes";
+import inventoryRoutes from "./modules/inventory/inventory/inventory.routes";
 
 const app = express();
 

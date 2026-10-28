@@ -1,6 +1,6 @@
-import prisma from "../../prisma/db";
-import ApiError from "../../shared/apiError";
-import logger from "../../config/logger";
+import prisma from "../../../prisma/db";
+import ApiError from "../../../shared/apiError";
+import logger from "../../../config/logger";
 import { InventoryRepository } from "./inventory.repository";
 import type {
   ListInventoryBalancesInput,

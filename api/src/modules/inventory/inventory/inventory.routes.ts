@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { authenticate } from "../../middlewares/auth.middleware";
+import { authenticate } from "../../../middlewares/auth.middleware";
 import {
   listInventoryBalancesController,
   getInventoryBalanceController,
   reconcileInventoryController,
 } from "./inventory.controller";
-import inventoryAdjustmentRoutes from "./inventoryAdjustment/inventoryAdjustment.routes";
+import inventoryAdjustmentRoutes from "../inventoryAdjustment/inventoryAdjustment.routes";
 
 const router = Router();
 
