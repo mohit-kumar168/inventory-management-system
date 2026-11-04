@@ -51,7 +51,7 @@ export const createInventoryAdjustmentController = AsyncHandler(
 
 export const listInventoryAdjustmentsController = AsyncHandler(
   async (req: Request, res: Response) => {
-    const parsed = listInventoryAdjustmentsSchema.safeParse(req.body);
+    const parsed = listInventoryAdjustmentsSchema.safeParse(req.query);
 
     if (!parsed.success) {
       throw new ApiError(400, "Invalid inventory adjustment query");

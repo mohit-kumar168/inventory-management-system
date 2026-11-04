@@ -1,7 +1,9 @@
 import { PurchaseOrderStatus } from "@prisma/client";
 import prisma from "../../../prisma/db";
-import type { ListInventoryBalancesInput, ReconciliationInput } from "./inventory.types";
-
+import type {
+  ListInventoryBalancesInput,
+  ReconciliationInput,
+} from "./inventory.types";
 
 const balanceSelect = {
   id: true,
@@ -72,7 +74,7 @@ export const InventoryRepository = {
         comparison = a.product.sku.localeCompare(b.product.sku);
       } else {
         comparison =
-          a[sortField as keyof typeof a] as number -
+          (a[sortField as keyof typeof a] as number) -
           (b[sortField as keyof typeof b] as number);
       }
 
@@ -108,6 +110,7 @@ export const InventoryRepository = {
         warehouse: { code: "asc" },
       },
     });
+
     const totals = balances.reduce(
       (result, balance) => ({
         onHandQuantity: result.onHandQuantity + balance.onHandQuantity,
@@ -130,8 +133,11 @@ export const InventoryRepository = {
         productId,
         purchaseOrder: {
           status: {
-            in: Object.values(PurchaseOrderStatus),
-          }
+            in: [
+              PurchaseOrderStatus.ORDERED,
+              PurchaseOrderStatus.PARTIALLY_RECEIVED,
+            ],
+          },
         },
       },
       select: {
@@ -141,8 +147,9 @@ export const InventoryRepository = {
     });
 
     const onOrderQuantity = purchaseOrderItems.reduce(
-      (sum, item) => sum + Math.max(0, item.orderedQuantity - item.receivedQuantity),
-      0
+      (sum, item) =>
+        sum + Math.max(0, item.orderedQuantity - item.receivedQuantity),
+      0,
     );
 
     return {
@@ -154,7 +161,8 @@ export const InventoryRepository = {
         warehouseName: balance.warehouse.name,
         onHandQuantity: balance.onHandQuantity,
         reservedQuantity: balance.reservedQuantity,
-        availableQuantity: balance.onHandQuantity - balance.reservedQuantity,
+        availableQuantity:
+          balance.onHandQuantity - balance.reservedQuantity,
         updatedAt: balance.updatedAt,
       })),
     };
@@ -178,12 +186,17 @@ export const InventoryRepository = {
           ...(filters.productId ? { productId: filters.productId } : {}),
           ...(filters.warehouseId ? { warehouseId: filters.warehouseId } : {}),
         },
-        _sum: { quantityDelta: true },
+        _sum: {
+          quantityDelta: true,
+        },
       }),
+
       prisma.reservation.groupBy({
         by: ["productId", "warehouseId"],
         where: {
-          status: "ACTIVE",
+          status: {
+            in: ["ACTIVE", "PARTIALLY_CONSUMED"],
+          },
           ...(filters.productId ? { productId: filters.productId } : {}),
           ...(filters.warehouseId ? { warehouseId: filters.warehouseId } : {}),
         },
@@ -238,3 +251,4 @@ export const InventoryRepository = {
     });
   },
 };
+

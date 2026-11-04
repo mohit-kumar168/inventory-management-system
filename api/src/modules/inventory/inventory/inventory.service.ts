@@ -54,8 +54,8 @@ export const InventoryService = {
     const result = await InventoryRepository.getReconciliation(filters);
     const discrepancies = result.filter(
       (item) =>
-        item.onHandMatchesLedger ||
-        item.reservedMatchesReservations,
+        !item.onHandMatchesLedger ||
+        !item.reservedMatchesReservations,
     );
 
     return {
