@@ -1,9 +1,10 @@
+import ApiError from "../../../shared/apiError";
 import { stockMovementRepository } from "./stockMovement.repository";
 
 export const stockMovementService = {
-  async list(filters: Parameters<
-    typeof stockMovementRepository.findMany
-  >[0]) {
+  async list(
+    filters: Parameters<typeof stockMovementRepository.findMany>[0],
+  ) {
     return stockMovementRepository.findMany(filters);
   },
 
@@ -12,14 +13,14 @@ export const stockMovementService = {
       await stockMovementRepository.findById(movementId);
 
     if (!movement) {
-      throw Object.assign(new Error("Stock movement not found"), {
-        statusCode: 404,
-      });
+      throw new ApiError(404, "Stock movement not found");
     }
 
-    let source:
-      | { type: string; id: string; number: string }
-      | null = null;
+    let source: {
+      type: string;
+      id: string;
+      number: string;
+    } | null = null;
 
     if (movement.goodsReceiptItem) {
       source = {
@@ -59,3 +60,4 @@ export const stockMovementService = {
     };
   },
 };
+
