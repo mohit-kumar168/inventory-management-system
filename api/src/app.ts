@@ -6,6 +6,7 @@ import productRoutes from "./modules/products/product.routes";
 import warehouseRoutes from "./modules/warehouses/warehouse.routes";
 import supplierRoutes from "./modules/supplier/supplier.routes";
 import inventoryRoutes from "./modules/inventory/inventory/inventory.routes";
+import purchaseOrderRoutes from "./modules/purchase/purchase_order/purchaseOrder.routes";
 
 const app = express();
 
@@ -25,5 +26,6 @@ app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/warehouses", warehouseRoutes);
 app.use("/api/v1/suppliers", supplierRoutes);
 app.use("/api/v1/inventory", inventoryRoutes);
+app.use("/api/v1/purchase-order", purchaseOrderRoutes);
 
 export default app;
