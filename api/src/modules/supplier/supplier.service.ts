@@ -8,7 +8,7 @@ import type {
 import ApiError from "../../shared/apiError";
 import logger from "../../config/logger";
 
-function handleDBError(error: unknown): never {
+const handleDBError = (error: unknown): never => {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === "P2003") {
       logger.warn(
