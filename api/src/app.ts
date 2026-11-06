@@ -8,6 +8,7 @@ import supplierRoutes from "./modules/supplier/supplier.routes";
 import inventoryRoutes from "./modules/inventory/inventory/inventory.routes";
 import purchaseOrderRoutes from "./modules/purchase/purchase_order/purchaseOrder.routes";
 import goodsReceiptRoutes from "./modules/goods_receipt/goodsReceipt.routes";
+import customerRoutes from "./modules/customer/customer.routes";
 
 const app = express();
 
@@ -29,5 +30,6 @@ app.use("/api/v1/suppliers", supplierRoutes);
 app.use("/api/v1/inventory", inventoryRoutes);
 app.use("/api/v1/purchase-order", purchaseOrderRoutes);
 app.use("/api/v1/goods-receipt", goodsReceiptRoutes);
+app.use("/api/v1/customers", customerRoutes);
 
 export default app;
