@@ -11,6 +11,8 @@ import {
   getPurchaseOrderController,
   updatePurchaseOrderController,
   submitPurchaseOrderController,
+  approvePurchaseOrderController,
+  markPurchaseOrderAsOrderedController,
   cancelPurchaseOrderController,
 } from "./purchaseOrder.controller";
 
@@ -32,6 +34,8 @@ router.patch(
 );
 
 router.patch("/:id/submit", submitPurchaseOrderController);
+router.patch("/:id/approve", approvePurchaseOrderController);
+router.patch("/:id/order", markPurchaseOrderAsOrderedController);
 router.patch("/:id/cancel", cancelPurchaseOrderController);
 
 export default router;

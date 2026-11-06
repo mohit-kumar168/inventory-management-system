@@ -183,6 +183,54 @@ export const PurchaseOrderService = {
     }
   },
 
+  async approve(id: string, approvedById: string) {
+    const purchaseOrder = await PurchaseOrderRepository.findById(id);
+
+    if (!purchaseOrder) {
+      throw new ApiError(404, "Purchase order not found");
+    }
+
+    if (purchaseOrder.status !== PurchaseOrderStatus.PENDING_APPROVAL) {
+      throw new ApiError(409, "Only pending purhcase orders can be approved");
+    }
+
+    try {
+      const updatedOrder = await PurchaseOrderRepository.updateStatus(id, PurchaseOrderStatus.APPROVED, approvedById);
+      logger.info(
+        { purchaseOrderId: id, approvedById },
+        "Purchase order approved successfully",
+      );
+      return updatedOrder;
+    } catch (error) {
+      handleDBError(error);
+    }
+  },
+
+  async markAsOrdered(id: string) {
+    const purchaseOrder = await PurchaseOrderRepository.findById(id);
+    if (!purchaseOrder) {
+      throw new ApiError(404, "Purchase order not found");
+    }
+
+    if (purchaseOrder?.status !== PurchaseOrderStatus.APPROVED) {
+      throw new ApiError(409, "Only approved purchase orderes can be marked as ordred");
+    }
+
+    try {
+      const updatedOrder = await PurchaseOrderRepository.updateStatus(id, PurchaseOrderStatus.ORDERED);
+
+      logger.info(
+        { purchaseOrderId: id },
+        "Purchase ordred marked as ordered",
+      );
+
+      return updatedOrder;
+    } catch (error) {
+      handleDBError(error);
+    }
+
+  },
+
   async cancel(id: string) {
     const purchaseOrder = await PurchaseOrderRepository.findById(id);
 

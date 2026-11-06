@@ -138,6 +138,47 @@ export const submitPurchaseOrderController = AsyncHandler(
   },
 );
 
+export const approvePurchaseOrderController = AsyncHandler(
+  async (req, res) => {
+    const id = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
+
+    if (!id) {
+      throw new ApiError(400, "Purchase order ID is required");
+    }
+
+    const purchaseOrder = await PurchaseOrderService.approve(id, req.user?.id!);
+
+    res.status(200).json(
+      new ApiResponse(
+        "Purchase order approved",
+        purchaseOrder,
+      )
+    );
+  }
+);
+
+export const markPurchaseOrderAsOrderedController = AsyncHandler(
+  async (req, res) => {
+    const id = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
+
+    if (!id) {
+      throw new ApiError(400, "Purchase order ID is required");
+    }
+
+    const purchaseOrder = await PurchaseOrderService.markAsOrdered(id);
+
+    res.status(200).json(
+      new ApiResponse(
+        "Purchase order marked as ordered successfully",
+        purchaseOrder
+      ));
+  }
+);
+
 export const cancelPurchaseOrderController = AsyncHandler(
   async (req, res) => {
     const id = Array.isArray(req.params.id)
