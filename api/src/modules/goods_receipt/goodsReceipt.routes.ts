@@ -7,6 +7,7 @@ import {
   getGoodsReceiptController,
   updateGoodsReceiptController,
   cancelGoodsReceiptController,
+  postGoodsReceiptController,
 } from "./goodsReceipt.controller";
 import {
   createGoodsReceiptSchema,
@@ -30,6 +31,8 @@ router.patch(
   "/:id",
   validateBody(updateGoodsReceiptSchema, updateGoodsReceiptController),
 );
+
+router.patch("/:id/post", postGoodsReceiptController);
 
 router.patch("/:id/cancel", cancelGoodsReceiptController);
 

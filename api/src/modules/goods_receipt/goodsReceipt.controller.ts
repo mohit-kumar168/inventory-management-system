@@ -114,6 +114,23 @@ export const updateGoodsReceiptController = AsyncHandler(async (req, res) => {
     );
 });
 
+export const postGoodsReceiptController = AsyncHandler(
+  async (req, res) => {
+    const id = getGoodsReceiptId(req.params.id);
+
+    const goodsReceipt = await GoodsReceiptService.post(id);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          "Goods receipt posted successfully",
+          goodsReceipt,
+        ),
+      );
+  },
+);
+
 export const cancelGoodsReceiptController = AsyncHandler(async (req, res) => {
   const id = getGoodsReceiptId(req.params.id);
 

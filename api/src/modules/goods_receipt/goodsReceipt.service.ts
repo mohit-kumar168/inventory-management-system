@@ -31,6 +31,53 @@ const handleDBError = (error: unknown): never => {
   throw error;
 };
 
+const handlePostingError = (error: unknown): never => {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2034") {
+      throw new ApiError(
+        409,
+        "Concurrent inventory update detected. Please retry posting",
+      );
+    }
+
+    handleDBError(error);
+  }
+
+  if (error instanceof Error) {
+    if (
+      error.message === "Goods receipt not found" ||
+      error.message === "Purchase order not found"
+    ) {
+      throw new ApiError(404, error.message);
+    }
+
+    if (
+      error.message === "Only draft goods receipts can be posted" ||
+      error.message === "Purchase order is not available for receiving goods"
+    ) {
+      throw new ApiError(409, error.message);
+    }
+
+    if (
+      error.message ===
+      "Purchase order item does not belong to this purchase order"
+    ) {
+      throw new ApiError(400, error.message);
+    }
+
+    if (
+      error.message.startsWith(
+        "Accepted quantity exceeds remaining quantity",
+      )
+    ) {
+      throw new ApiError(400, error.message);
+    }
+  }
+
+  logger.error({ err: error }, "Goods receipt posting failed");
+  throw error;
+};
+
 const generateReceiptNo = () => {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const suffix = randomBytes(3).toString("hex").toUpperCase();
@@ -201,6 +248,37 @@ export const GoodsReceiptService = {
       return updatedReceipt;
     } catch (error) {
       handleDBError(error);
+    }
+  },
+
+  async post(identifier: string) {
+    const existingReceipt =
+      await GoodsReceiptRepository.findById(identifier);
+
+    if (!existingReceipt) {
+      throw new ApiError(404, "Goods receipt not found");
+    }
+
+    if (existingReceipt.status !== GoodsReceiptStatus.DRAFT) {
+      throw new ApiError(
+        409,
+        "Only draft goods receipts can be posted",
+      );
+    }
+
+    try {
+      const postedReceipt = await GoodsReceiptRepository.post(
+        existingReceipt.id,
+      );
+
+      logger.info(
+        { goodsReceiptId: postedReceipt.id },
+        "Goods receipt posted successfully",
+      );
+
+      return postedReceipt;
+    } catch (error) {
+      handlePostingError(error);
     }
   },
 

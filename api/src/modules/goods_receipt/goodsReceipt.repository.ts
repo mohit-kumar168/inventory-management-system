@@ -1,4 +1,4 @@
-import { Prisma, GoodsReceiptStatus } from "@prisma/client";
+import { Prisma, GoodsReceiptStatus, PurchaseOrderStatus, StockMovementType } from "@prisma/client";
 import prisma from "../../prisma/db";
 import type {
   CreateGoodsReceiptInput,
@@ -263,6 +263,179 @@ export const GoodsReceiptRepository = {
         select: goodsReceiptSelect,
       });
     });
+  },
+
+  async post(id: string) {
+    return prisma.$transaction(
+      async (tx) => {
+        const receipt = await tx.goodsReceipt.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            status: true,
+            purchaseOrderId: true,
+            warehouseId: true,
+            receivedById: true,
+            items: {
+              select: {
+                id: true,
+                quantityAccepted: true,
+                purchaseOrderItemId: true,
+                unitCost: true,
+                purchaseOrderItem: {
+                  select: {
+                    id: true,
+                    purchaseOrderId: true,
+                    productId: true,
+                    orderedQuantity: true,
+                    receivedQuantity: true,
+                    unitCost: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (!receipt) {
+          throw new Error("Goods receipt not found");
+        }
+
+        if (receipt.status !== GoodsReceiptStatus.DRAFT) {
+          throw new Error("Only draft goods receipts can be posted");
+        }
+
+        const purchaseOrder = await tx.purchaseOrder.findUnique({
+          where: { id: receipt.purchaseOrderId },
+          select: {
+            id: true,
+            status: true,
+          },
+        });
+
+        if (!purchaseOrder) {
+          throw new Error("Purchase order not found");
+        }
+
+        if (
+          purchaseOrder.status !== PurchaseOrderStatus.ORDERED &&
+          purchaseOrder.status !== PurchaseOrderStatus.PARTIALLY_RECEIVED
+        ) {
+          throw new Error("Purchase order is not available for receiving goods");
+        }
+
+        let totalAcceptedQuantity = 0;
+
+        for (const item of receipt.items) {
+          const purchaseOrderItem = item.purchaseOrderItem;
+
+          if (purchaseOrderItem.purchaseOrderId !== receipt.purchaseOrderId) {
+            throw new Error("Purchase order item does not belong to this purchase order");
+          }
+
+          const remainingQuantity =
+            purchaseOrderItem.orderedQuantity -
+            purchaseOrderItem.receivedQuantity;
+
+          if (item.quantityAccepted > remainingQuantity) {
+            throw new Error(
+              `Accepted quantity exceeds remaining quantity for product ${purchaseOrderItem.productId}`,
+            );
+          }
+
+          if (item.quantityAccepted === 0) {
+            continue;
+          }
+
+          totalAcceptedQuantity += item.quantityAccepted;
+
+          await tx.inventoryBalance.upsert({
+            where: {
+              productId_warehouseId: {
+                productId: purchaseOrderItem.productId,
+                warehouseId: receipt.warehouseId,
+              },
+            },
+            create: {
+              productId: purchaseOrderItem.productId,
+              warehouseId: receipt.warehouseId,
+              onHandQuantity: item.quantityAccepted,
+              reservedQuantity: 0,
+              version: 1,
+            },
+            update: {
+              onHandQuantity: {
+                increment: item.quantityAccepted,
+              },
+              version: {
+                increment: 1,
+              },
+            },
+          });
+
+          await tx.stockMovement.create({
+            data: {
+              productId: purchaseOrderItem.productId,
+              warehouseId: receipt.warehouseId,
+              movementType: StockMovementType.PURCHASE_IN,
+              quantityDelta: item.quantityAccepted,
+              unitCost: item.unitCost ?? purchaseOrderItem.unitCost,
+              goodsReceiptItemId: item.id,
+              createdById: receipt.receivedById,
+            },
+          });
+
+          await tx.purchaseOrderItem.update({
+            where: {
+              id: purchaseOrderItem.id,
+            },
+            data: {
+              receivedQuantity: {
+                increment: item.quantityAccepted,
+              },
+            },
+          });
+        }
+
+        if (totalAcceptedQuantity > 0) {
+          const purchaseOrderItems = await tx.purchaseOrderItem.findMany({
+            where: {
+              purchaseOrderId: receipt.purchaseOrderId,
+            },
+            select: {
+              orderedQuantity: true,
+              receivedQuantity: true,
+            },
+          });
+
+          const fullyReceived = purchaseOrderItems.every(
+            (item) => item.receivedQuantity >= item.orderedQuantity,
+          );
+
+          await tx.purchaseOrder.update({
+            where: {
+              id: receipt.purchaseOrderId,
+            },
+            data: {
+              status: fullyReceived
+                ? PurchaseOrderStatus.RECEIVED
+                : PurchaseOrderStatus.PARTIALLY_RECEIVED,
+            },
+          });
+        }
+
+        return tx.goodsReceipt.update({
+          where: { id },
+          data: {
+            status: GoodsReceiptStatus.POSTED,
+          },
+          select: goodsReceiptSelect,
+        });
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
   },
 
   updateStatus(
