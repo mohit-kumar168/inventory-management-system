@@ -32,13 +32,15 @@ const salesOrderSelect = {
   createdById: true,
   updatedAt: true,
 
-  select: {
-    id: true,
-    firstName: true,
-    lastName: true,
-    email: true,
-    phone: true,
-    status: true,
+  customer: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      phone: true,
+      status: true,
+    }
   },
 
   createdBy: {
