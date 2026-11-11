@@ -1,3 +1,4 @@
+
 import {
   SalesOrderStatus,
   PaymentStatus,
@@ -40,8 +41,7 @@ export const createSalesOrderSchema = salesOrderFieldsSchema
   .refine(
     (data) =>
       Number(Boolean(data.shippingAddressId)) +
-      Number(Boolean(data.shippingAddress)) ===
-      1,
+      Number(Boolean(data.shippingAddress)) === 1,
     {
       message:
         "Provide exactly one of shippingAddressId or shippingAddress",
@@ -98,7 +98,7 @@ export const salesOrderIdSchema = z.object({
 });
 
 export const confirmSalesOrderSchema = z.object({
-  warehouseId: z.string().optional(),
+  warehouseId: z.string().trim().min(1),
 });
 
 export const cancelSalesOrderSchema = z.object({
@@ -111,6 +111,11 @@ export type UpdateSalesOrderInput = z.output<typeof updateSalesOrderSchema>;
 
 export type ListSalesOrdersInput = z.output<typeof listSalesOrdersSchema>;
 
-export type ConfirmSalesOrderInput = z.output<typeof confirmSalesOrderSchema>;
+export type ConfirmSalesOrderInput = z.output<
+  typeof confirmSalesOrderSchema
+>;
 
-export type CancelSalesOrderInput = z.output<typeof cancelSalesOrderSchema>;
+export type CancelSalesOrderInput = z.output<
+  typeof cancelSalesOrderSchema
+>;
+

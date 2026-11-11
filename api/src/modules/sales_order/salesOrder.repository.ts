@@ -1,9 +1,18 @@
-import { Prisma, CustomerStatus, ProductStatus, PaymentStatus } from "@prisma/client";
+
+import {
+  Prisma,
+  CustomerStatus,
+  ProductStatus,
+  ReservationStatus,
+  SalesOrderStatus,
+  FulfillmentStatus,
+  WarehouseStatus,
+} from "@prisma/client";
 import prisma from "../../prisma/db";
 import type {
   CreateSalesOrderInput,
   UpdateSalesOrderInput,
-  ListSalesOrdersInput
+  ListSalesOrdersInput,
 } from "./salesOrder.types";
 
 const salesOrderSelect = {
@@ -14,7 +23,7 @@ const salesOrderSelect = {
   paymentStatus: true,
   fulfillmentStatus: true,
   shippingAddressId: true,
-  shippingRecientName: true,
+  shippingRecipientName: true,
   shippingPhone: true,
   shippingLine1: true,
   shippingLine2: true,
@@ -30,8 +39,10 @@ const salesOrderSelect = {
   notes: true,
   cancellationReason: true,
   createdById: true,
+  orderedAt: true,
+  cancelledAt: true,
+  createdAt: true,
   updatedAt: true,
-
   customer: {
     select: {
       id: true,
@@ -40,9 +51,8 @@ const salesOrderSelect = {
       email: true,
       phone: true,
       status: true,
-    }
+    },
   },
-
   createdBy: {
     select: {
       id: true,
@@ -51,14 +61,13 @@ const salesOrderSelect = {
       email: true,
     },
   },
-
   items: {
     select: {
       id: true,
       productId: true,
       productNameSnapshot: true,
       skuSnapshot: true,
-      quantitiy: true,
+      quantity: true,
       unitPrice: true,
       discountAmount: true,
       lineTotal: true,
@@ -73,8 +82,7 @@ const salesOrderSelect = {
       },
     },
   },
-};
-
+} satisfies Prisma.SalesOrderSelect;
 
 function calculateLineTotal(
   quantity: number,
@@ -286,7 +294,6 @@ export const SalesOrderRepository = {
       ...(status ? { status } : {}),
       ...(paymentStatus ? { paymentStatus } : {}),
       ...(fulfillmentStatus ? { fulfillmentStatus } : {}),
-
       ...(search
         ? {
           OR: [
@@ -323,7 +330,6 @@ export const SalesOrderRepository = {
           ],
         }
         : {}),
-
       ...(createdFrom || createdTo
         ? {
           createdAt: {
@@ -336,7 +342,6 @@ export const SalesOrderRepository = {
 
     return prisma.$transaction([
       prisma.salesOrder.count({ where }),
-
       prisma.salesOrder.findMany({
         where,
         select: salesOrderSelect,
@@ -366,6 +371,7 @@ export const SalesOrderRepository = {
         select: {
           status: true,
           customerId: true,
+          shippingAddressId: true,
           subtotal: true,
           discountAmount: true,
           shippingAmount: true,
@@ -376,7 +382,7 @@ export const SalesOrderRepository = {
         throw new Error("Sales order not found");
       }
 
-      if (existing.status !== "DRAFT") {
+      if (existing.status !== SalesOrderStatus.DRAFT) {
         throw new Error("Only draft sales orders can be updated");
       }
 
@@ -402,6 +408,16 @@ export const SalesOrderRepository = {
         updateData.customer = {
           connect: { id: data.customerId },
         };
+
+        if (
+          data.customerId !== existing.customerId &&
+          !data.shippingAddressId &&
+          !data.shippingAddress
+        ) {
+          updateData.shippingAddress = {
+            disconnect: true,
+          };
+        }
       }
 
       if (data.shippingAddressId) {
@@ -545,5 +561,324 @@ export const SalesOrderRepository = {
       });
     });
   },
+
+  async confirm(id: string, warehouseId: string) {
+    return prisma.$transaction(
+      async (tx) => {
+        const salesOrder = await tx.salesOrder.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            status: true,
+            items: {
+              select: {
+                id: true,
+                productId: true,
+                quantity: true,
+                product: {
+                  select: {
+                    productStatus: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (!salesOrder) {
+          throw new Error("Sales order not found");
+        }
+
+        if (salesOrder.status !== SalesOrderStatus.DRAFT) {
+          throw new Error("Only draft sales orders can be confirmed");
+        }
+
+        if (salesOrder.items.length === 0) {
+          throw new Error("Sales order has no items");
+        }
+
+        const warehouse = await tx.warehouse.findUnique({
+          where: { id: warehouseId },
+          select: {
+            id: true,
+            status: true,
+          },
+        });
+
+        if (!warehouse) {
+          throw new Error("Warehouse not found");
+        }
+
+        if (warehouse.status !== WarehouseStatus.ACTIVE) {
+          throw new Error("Warehouse is not active");
+        }
+
+        for (const item of salesOrder.items) {
+          if (item.product.productStatus !== ProductStatus.ACTIVE) {
+            throw new Error(
+              `Product ${item.productId} is not active`,
+            );
+          }
+
+          const inventoryBalance =
+            await tx.inventoryBalance.findUnique({
+              where: {
+                productId_warehouseId: {
+                  productId: item.productId,
+                  warehouseId,
+                },
+              },
+              select: {
+                id: true,
+                onHandQuantity: true,
+                reservedQuantity: true,
+                version: true,
+              },
+            });
+
+          if (!inventoryBalance) {
+            throw new Error(
+              `Inventory balance not found for product ${item.productId}`,
+            );
+          }
+
+          const availableQuantity =
+            inventoryBalance.onHandQuantity -
+            inventoryBalance.reservedQuantity;
+
+          if (item.quantity > availableQuantity) {
+            throw new Error(
+              `Insufficient available inventory for product ${item.productId}`,
+            );
+          }
+
+          const balanceUpdate = await tx.inventoryBalance.updateMany({
+            where: {
+              id: inventoryBalance.id,
+              version: inventoryBalance.version,
+            },
+            data: {
+              reservedQuantity: {
+                increment: item.quantity,
+              },
+              version: {
+                increment: 1,
+              },
+            },
+          });
+
+          if (balanceUpdate.count !== 1) {
+            throw new Error(
+              "Inventory changed during confirmation. Please retry",
+            );
+          }
+
+          await tx.reservation.create({
+            data: {
+              salesOrderItemId: item.id,
+              productId: item.productId,
+              warehouseId,
+              quantity: item.quantity,
+            },
+          });
+        }
+
+        const orderUpdate = await tx.salesOrder.updateMany({
+          where: {
+            id,
+            status: SalesOrderStatus.DRAFT,
+          },
+          data: {
+            status: SalesOrderStatus.CONFIRMED,
+            fulfillmentStatus: FulfillmentStatus.RESERVED,
+            orderedAt: new Date(),
+          },
+        });
+
+        if (orderUpdate.count !== 1) {
+          throw new Error(
+            "Sales order status changed during confirmation. Please retry",
+          );
+        }
+
+        return tx.salesOrder.findUnique({
+          where: { id },
+          select: salesOrderSelect,
+        });
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+  },
+
+  async cancel(id: string, reason: string) {
+    return prisma.$transaction(
+      async (tx) => {
+        const salesOrder = await tx.salesOrder.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            status: true,
+            items: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        });
+
+        if (!salesOrder) {
+          throw new Error("Sales order not found");
+        }
+
+        const cancellableStatuses: SalesOrderStatus[] = [
+          SalesOrderStatus.DRAFT,
+          SalesOrderStatus.PENDING,
+          SalesOrderStatus.CONFIRMED,
+        ];
+
+        if (!cancellableStatuses.includes(salesOrder.status)) {
+          throw new Error("This sales order cannot be cancelled");
+        }
+
+        if (salesOrder.status === SalesOrderStatus.CONFIRMED) {
+          const itemIds = salesOrder.items.map((item) => item.id);
+
+          const reservations = await tx.reservation.findMany({
+            where: {
+              salesOrderItemId: {
+                in: itemIds,
+              },
+              status: {
+                in: [
+                  ReservationStatus.ACTIVE,
+                  ReservationStatus.PARTIALLY_CONSUMED,
+                ],
+              },
+            },
+            select: {
+              id: true,
+              productId: true,
+              warehouseId: true,
+              quantity: true,
+              quantityConsumed: true,
+              quantityReleased: true,
+            },
+          });
+
+          for (const reservation of reservations) {
+            if (reservation.quantityConsumed > 0) {
+              throw new Error(
+                "Sales order cannot be cancelled because reserved stock has already been consumed",
+              );
+            }
+
+            const outstandingQuantity =
+              reservation.quantity -
+              reservation.quantityConsumed -
+              reservation.quantityReleased;
+
+            if (outstandingQuantity <= 0) {
+              continue;
+            }
+
+            const inventoryBalance =
+              await tx.inventoryBalance.findUnique({
+                where: {
+                  productId_warehouseId: {
+                    productId: reservation.productId,
+                    warehouseId: reservation.warehouseId,
+                  },
+                },
+                select: {
+                  id: true,
+                  reservedQuantity: true,
+                  version: true,
+                },
+              });
+
+            if (!inventoryBalance) {
+              throw new Error(
+                "Inventory balance not found while releasing reservation",
+              );
+            }
+
+            if (
+              inventoryBalance.reservedQuantity <
+              outstandingQuantity
+            ) {
+              throw new Error(
+                "Reserved inventory is inconsistent and cannot be released",
+              );
+            }
+
+            const balanceUpdate = await tx.inventoryBalance.updateMany({
+              where: {
+                id: inventoryBalance.id,
+                version: inventoryBalance.version,
+                reservedQuantity: {
+                  gte: outstandingQuantity,
+                },
+              },
+              data: {
+                reservedQuantity: {
+                  decrement: outstandingQuantity,
+                },
+                version: {
+                  increment: 1,
+                },
+              },
+            });
+
+            if (balanceUpdate.count !== 1) {
+              throw new Error(
+                "Inventory changed while releasing reservation. Please retry",
+              );
+            }
+
+            await tx.reservation.update({
+              where: { id: reservation.id },
+              data: {
+                quantityReleased: {
+                  increment: outstandingQuantity,
+                },
+                status: ReservationStatus.RELEASED,
+              },
+            });
+          }
+        }
+
+        const orderUpdate = await tx.salesOrder.updateMany({
+          where: {
+            id,
+            status: salesOrder.status,
+          },
+          data: {
+            status: SalesOrderStatus.CANCELLED,
+            fulfillmentStatus: FulfillmentStatus.CANCELLED,
+            cancellationReason: reason,
+            cancelledAt: new Date(),
+          },
+        });
+
+        if (orderUpdate.count !== 1) {
+          throw new Error(
+            "Sales order status changed during cancellation. Please retry",
+          );
+        }
+
+        return tx.salesOrder.findUnique({
+          where: { id },
+          select: salesOrderSelect,
+        });
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+  },
 };
+
+export default SalesOrderRepository;
 

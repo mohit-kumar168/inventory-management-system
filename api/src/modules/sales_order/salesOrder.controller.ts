@@ -1,4 +1,3 @@
-
 import AsyncHandler from "../../shared/asyncHandler";
 import ApiResponse from "../../shared/apiResponse";
 import ApiError from "../../shared/apiError";
@@ -7,6 +6,8 @@ import {
   createSalesOrderSchema,
   updateSalesOrderSchema,
   listSalesOrdersSchema,
+  confirmSalesOrderSchema,
+  cancelSalesOrderSchema,
 } from "./salesOrder.types";
 import type {
   CreateSalesOrderInput,
@@ -118,6 +119,70 @@ export const updateSalesOrderController = AsyncHandler(
       .json(
         new ApiResponse(
           "Sales order updated successfully",
+          salesOrder,
+        ),
+      );
+  },
+);
+
+export const confirmSalesOrderController = AsyncHandler(
+  async (req, res) => {
+    const id = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
+
+    if (!id) {
+      throw new ApiError(400, "Sales order ID is required");
+    }
+
+    const parsed = confirmSalesOrderSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      throw new ApiError(400, "Invalid sales order confirmation data");
+    }
+
+    const salesOrder = await SalesOrderService.confirm(
+      id,
+      parsed.data.warehouseId,
+    );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          "Sales order confirmed and inventory reserved successfully",
+          salesOrder,
+        ),
+      );
+  },
+);
+
+export const cancelSalesOrderController = AsyncHandler(
+  async (req, res) => {
+    const id = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
+
+    if (!id) {
+      throw new ApiError(400, "Sales order ID is required");
+    }
+
+    const parsed = cancelSalesOrderSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      throw new ApiError(400, "Invalid sales order cancellation data");
+    }
+
+    const salesOrder = await SalesOrderService.cancel(
+      id,
+      parsed.data.reason,
+    );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          "Sales order cancelled successfully",
           salesOrder,
         ),
       );

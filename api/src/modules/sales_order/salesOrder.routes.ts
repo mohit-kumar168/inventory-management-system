@@ -4,12 +4,16 @@ import { validateBody } from "../../middlewares/validate.middleware";
 import {
   createSalesOrderSchema,
   updateSalesOrderSchema,
+  confirmSalesOrderSchema,
+  cancelSalesOrderSchema,
 } from "./salesOrder.types";
 import {
   createSalesOrderController,
   listSalesOrdersController,
   getSalesOrderController,
   updateSalesOrderController,
+  confirmSalesOrderController,
+  cancelSalesOrderController,
 } from "./salesOrder.controller";
 
 const router = Router();
@@ -22,6 +26,16 @@ router.post(
 );
 
 router.get("/", listSalesOrdersController);
+
+router.post(
+  "/:id/confirm",
+  validateBody(confirmSalesOrderSchema, confirmSalesOrderController),
+);
+
+router.post(
+  "/:id/cancel",
+  validateBody(cancelSalesOrderSchema, cancelSalesOrderController),
+);
 
 router.get("/:id", getSalesOrderController);
 
