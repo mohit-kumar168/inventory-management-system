@@ -2,6 +2,7 @@
 import { Router } from "express";
 import { authenticate } from "../../middlewares/auth.middleware";
 import { validateBody } from "../../middlewares/validate.middleware";
+import warehouseTransferRoutes from "./warehouse_transfer/warehouseTransfer.routes";
 import {
   createWarehouseSchema,
   updateWarehouseSchema,
@@ -17,6 +18,8 @@ import {
 const router = Router();
 
 router.use(authenticate);
+
+router.use("/warehouse-transfers", warehouseTransferRoutes);
 
 router.post(
   "/",
